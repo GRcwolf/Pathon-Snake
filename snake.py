@@ -7,9 +7,9 @@ pygame.display.set_caption('Python Python')
 
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
-BLOCK_SIZE = 20
+BLOCK_SIZE = 10
 SPEED = 250
-FPS = 60
+FPS = 50
 SEGMENTS = 3
 
 WHITE = (255, 255, 255)
@@ -17,21 +17,20 @@ BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+PURPLE = (255, 0, 255)
 
-FOOD_COLORS = [WHITE, GREEN, RED, BLUE]
+FOOD_COLORS = [WHITE, GREEN, RED, BLUE, PURPLE]
 
 
 class Snake:
 
     def __init__(self):
         self.x_pos = WINDOW_WIDTH / 2
-        # while self.x_pos % BLOCK_SIZE != 0:
-        #     self.x_pos -= 1
         self.y_pos = WINDOW_HEIGHT / 2
-        # while self.y_pos % BLOCK_SIZE != 0:
-        #     self.x_pos -= 1
         self.direction = 0
         self.segments = []
+        self.segment_colors = [GREEN]
+        self.segment_position = [(self.x_pos, self.y_pos + BLOCK_SIZE)]
         for i in range(0, SEGMENTS):
             index = randint(1, len(FOOD_COLORS)) - 1
             self.grow(FOOD_COLORS[index])
@@ -55,53 +54,72 @@ class Snake:
             self.x_pos += WINDOW_WIDTH
 
     def draw(self, window):
-        for segment in self.segments:
-            segment.draw(window)
-        pygame.draw.rect(window, GREEN, (self.x_pos, self.y_pos, BLOCK_SIZE, BLOCK_SIZE))
+        if len(self.segment_position) != len(self.segment_colors):
+            print('An error happened')
+            quit(1)
 
-    def update_directions(self):
-        prev_direction = self.direction
-        x, y = self.x_pos, self.y_pos
-        self.segments[0].x_pos, self.segments[0].y_pos = x, y
+        for i in range(0, len(self.segment_position)):
+            x, y = self.segment_position[i]
+            Game.draw_rect(window, x, y, self.segment_colors[i])
 
-        for i in range(1, len(self.segments)):
-            segment = self.segments[i]
-            tmp_direction = segment.direction
-            segment.direction = prev_direction
-            prev_direction = tmp_direction
+    def update_directions_if_necessary(self):
+        x1, y1 = self.segment_position[0]
+        x0, y0 = self.x_pos, self.y_pos
+        changes_occurred = False
 
-            if segment.direction == 1:
-                x -= BLOCK_SIZE
-            elif segment.direction == 2:
-                y -= BLOCK_SIZE
-            elif segment.direction == 3:
-                x += BLOCK_SIZE
-            else:
-                y += BLOCK_SIZE
-            if y > WINDOW_HEIGHT:
-                y -= WINDOW_HEIGHT
-            elif y < 0:
-                y += WINDOW_HEIGHT
-            if x > WINDOW_WIDTH:
-                x -= WINDOW_WIDTH
-            elif x < 0:
-                x += WINDOW_WIDTH
-            segment.x_pos = x
-            segment.y_pos = y
+        if (y1 - BLOCK_SIZE > y0 or y0 - y1 > 2 * BLOCK_SIZE) and y1 - y0 < 2 * BLOCK_SIZE:
+            del self.segment_position[-1]
+            self.grow_position((x1, y1 - BLOCK_SIZE))
+            changes_occurred = True
+        if (y1 + BLOCK_SIZE < y0 or y1 - y0 > 2 * BLOCK_SIZE) and y0 - y1 < 2 * BLOCK_SIZE:
+            del self.segment_position[-1]
+            self.grow_position((x1, y1 + BLOCK_SIZE))
+            changes_occurred = True
+        if (x1 + BLOCK_SIZE < x0 or x1 - x0 > 2 * BLOCK_SIZE) and x0 - x1 < 2 * BLOCK_SIZE:
+            del self.segment_position[-1]
+            self.grow_position((x1 + BLOCK_SIZE, y1))
+            changes_occurred = True
+        if (x1 - BLOCK_SIZE > x0 or x0 - x1 > 2 * BLOCK_SIZE) and x1 - x0 < 2 * BLOCK_SIZE:
+            del self.segment_position[-1]
+            self.grow_position((x1 - BLOCK_SIZE, y1))
+            changes_occurred = True
+        if changes_occurred:
+            for i in range(0, len(self.segment_position)):
+                x, y = self.segment_position[i]
+                if y > WINDOW_HEIGHT:
+                    y -= WINDOW_HEIGHT
+                elif y < BLOCK_SIZE:
+                    y += WINDOW_HEIGHT
+                if x > WINDOW_WIDTH:
+                    x -= WINDOW_WIDTH
+                elif x < BLOCK_SIZE:
+                    x += WINDOW_WIDTH
+                self.segment_position[i] = (x, y)
 
     def grow(self, color=GREEN):
-        self.segments = [Segment(self.direction, color)] + self.segments
+        self.grow_color(color)
+        self.grow_position()
 
+    def grow_position(self, position=(0, 0)):
+        x_pos, y_pos = position
+        if x_pos == 0 and y_pos == 0:
+            x_pos, y_pos = self.get_position_for_segments()
+        self.segment_position = [(x_pos, y_pos)] + self.segment_position
 
-class Segment:
-    def __init__(self, direction, color=GREEN):
-        self.direction = direction
-        self.color = color
-        self.x_pos = WINDOW_HEIGHT
-        self.y_pos = WINDOW_WIDTH
+    def grow_color(self, color=GREEN):
+        self.segment_colors = [color] + self.segment_colors
 
-    def draw(self, window):
-        pygame.draw.rect(window, self.color, (self.x_pos, self.y_pos, BLOCK_SIZE, BLOCK_SIZE))
+    def get_position_for_segments(self):
+        x, y = self.segment_position[0]
+        if self.direction == 1:
+            x += BLOCK_SIZE
+        elif self.direction == 2:
+            y += BLOCK_SIZE
+        elif self.direction == 3:
+            x -= BLOCK_SIZE
+        else:
+            y -= BLOCK_SIZE
+        return x, y
 
 
 class Food:
@@ -112,12 +130,15 @@ class Food:
         self.color = FOOD_COLORS[color_index]
 
     def draw(self, window):
-        pygame.draw.rect(window, self.color, (self.x_pos, self.y_pos, BLOCK_SIZE, BLOCK_SIZE))
+        Game.draw_rect(window, self.x_pos, self.y_pos, self.color)
 
 
 class Game:
     def __init__(self):
-        self.last_direction_update = 0
+        if SEGMENTS < 1:
+            print('At least one segment is required')
+            quit(1)
+        self.is_paused = False
         self.main()
 
     @staticmethod
@@ -141,7 +162,8 @@ class Game:
 
     @staticmethod
     def check_food_collision(snake, food):
-        if Game.check_collision((snake.x_pos, snake.y_pos, BLOCK_SIZE, BLOCK_SIZE),
+        x, y = snake.segment_position[0]
+        if Game.check_collision((x, y, BLOCK_SIZE, BLOCK_SIZE),
                                 (food.x_pos, food.y_pos, BLOCK_SIZE, BLOCK_SIZE)):
             snake.grow(food.color)
             food = Food()
@@ -154,28 +176,6 @@ class Game:
         play = True
         snake = Snake()
         food = Food()
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(BLACK)
-        # snake.grow()
-        # snake.grow(WHITE)
         while play:
             clock.tick(FPS)
             for event in pygame.event.get():
@@ -190,17 +190,21 @@ class Game:
                         snake.direction = 2
                     if event.key in [pygame.K_LEFT, pygame.K_a] and not snake.direction == 1:
                         snake.direction = 3
-            self.last_direction_update += 1
-            if self.last_direction_update >= BLOCK_SIZE / (SPEED / FPS):
-                snake.update_directions()
-                self.last_direction_update -= BLOCK_SIZE / (SPEED / FPS)
+                    if event.key in [pygame.K_SPACE, pygame.K_PAUSE]:
+                        self.is_paused = not self.is_paused
 
-            snake, food = Game.check_food_collision(snake, food)
+            if not self.is_paused:
+                snake.update_directions_if_necessary()
+                snake, food = Game.check_food_collision(snake, food)
+                snake.move()
             window.fill(BLACK)
             food.draw(window)
-            snake.move()
             snake.draw(window)
             pygame.display.update()
+
+    @staticmethod
+    def draw_rect(window, x, y, color=GREEN):
+        pygame.draw.rect(window, color, (x, y, BLOCK_SIZE, BLOCK_SIZE))
 
 
 if __name__ == '__main__':
