@@ -1,10 +1,9 @@
 from random import randint
 
+import math
 import pygame
 
-pygame.init()
-pygame.display.set_caption('Python Python')
-
+FONT_SIZE = 50
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 BLOCK_SIZE = 10
@@ -20,6 +19,11 @@ BLUE = (0, 0, 255)
 PURPLE = (255, 0, 255)
 
 FOOD_COLORS = [WHITE, GREEN, RED, BLUE, PURPLE]
+
+pygame.init()
+pygame.font.init()
+font = pygame.font.SysFont('Comic Sans MS', FONT_SIZE)
+pygame.display.set_caption('Python Python')
 
 
 class Snake:
@@ -121,6 +125,16 @@ class Snake:
             y -= BLOCK_SIZE
         return x, y
 
+    def check_for_collision(self):
+        collision = False
+        x_check, y_check = self.segment_position[0]
+        for i in range(3, len(self.segment_position)):
+            x, y = self.segment_position[i]
+            if Game.check_collision((x, y, BLOCK_SIZE, BLOCK_SIZE), (x_check, y_check, BLOCK_SIZE, BLOCK_SIZE)):
+                collision = True
+                break
+        return collision
+
 
 class Food:
     def __init__(self):
@@ -139,6 +153,8 @@ class Game:
             print('At least one segment is required')
             quit(1)
         self.is_paused = False
+        self.score = 0
+        self.time = float(0)
         self.main()
 
     @staticmethod
@@ -160,13 +176,14 @@ class Game:
                 y_collides = True
         return y_collides and x_collides
 
-    @staticmethod
-    def check_food_collision(snake, food):
+    def check_food_collision(self, snake, food):
         x, y = snake.segment_position[0]
         if Game.check_collision((x, y, BLOCK_SIZE, BLOCK_SIZE),
                                 (food.x_pos, food.y_pos, BLOCK_SIZE, BLOCK_SIZE)):
             snake.grow(food.color)
+
             food = Food()
+            self.score += 1
 
         return snake, food
 
@@ -174,9 +191,10 @@ class Game:
         clock = pygame.time.Clock()
         window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         play = True
+        game_over = False
         snake = Snake()
         food = Food()
-        while play:
+        while play and not game_over:
             clock.tick(FPS)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -193,18 +211,40 @@ class Game:
                     if event.key in [pygame.K_SPACE, pygame.K_PAUSE]:
                         self.is_paused = not self.is_paused
 
+            window.fill(BLACK)
+            self.draw_score(window)
+            self.draw_time(window)
             if not self.is_paused:
                 snake.update_directions_if_necessary()
-                snake, food = Game.check_food_collision(snake, food)
+                snake, food = self.check_food_collision(snake, food)
                 snake.move()
-            window.fill(BLACK)
+                self.time += 1 / FPS
+                if snake.check_for_collision():
+                    game_over = True
             food.draw(window)
             snake.draw(window)
             pygame.display.update()
+        if game_over:
+            while play:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        play = False
 
     @staticmethod
     def draw_rect(window, x, y, color=GREEN):
         pygame.draw.rect(window, color, (x, y, BLOCK_SIZE, BLOCK_SIZE))
+
+    def draw_score(self, window):
+        score_surface = font.render('Score: ' + str(self.score), False, RED)
+        window.blit(score_surface, (0, 0))
+
+    def draw_time(self, window):
+        hours = math.floor(self.time / 3600)
+        minutes = math.floor(self.time / 60)
+        seconds = math.floor(self.time % 60)
+        time_surface = font.render('Time: ' + str(hours) + ':' + str(minutes) + ':' + str(seconds), False, RED)
+        offset = math.floor((WINDOW_WIDTH - time_surface.get_width()) / 25) * 25
+        window.blit(time_surface, (offset, 0))
 
 
 if __name__ == '__main__':
