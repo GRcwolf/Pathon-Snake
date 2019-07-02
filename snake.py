@@ -3,6 +3,7 @@ from random import randint
 import math
 import pygame
 
+# Define some constants.
 FONT_SIZE = 50
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
@@ -11,6 +12,7 @@ SPEED = 250
 FPS = 50
 SEGMENTS = 3
 
+# Define the colors.
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
@@ -18,7 +20,7 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 PURPLE = (255, 0, 255)
 
-FOOD_COLORS = [WHITE, GREEN, RED, BLUE, PURPLE]
+FOOD_COLORS = [WHITE, GREEN, BLUE, PURPLE]
 
 pygame.init()
 pygame.font.init()
@@ -29,6 +31,9 @@ pygame.display.set_caption('Python Python')
 class Snake:
 
     def __init__(self):
+        """
+        Initialized a Snake object.
+        """
         self.x_pos = WINDOW_WIDTH / 2
         self.y_pos = WINDOW_HEIGHT / 2
         self.direction = 0
@@ -40,6 +45,9 @@ class Snake:
             self.grow(FOOD_COLORS[index])
 
     def move(self):
+        """
+        Let the snake move on each frame.
+        """
         if self.direction == 1:
             self.x_pos += SPEED / FPS
         elif self.direction == 2:
@@ -58,15 +66,23 @@ class Snake:
             self.x_pos += WINDOW_WIDTH
 
     def draw(self, window):
+        """
+        Draws the snake.
+
+        :param window:
+        """
         if len(self.segment_position) != len(self.segment_colors):
             print('An error happened')
             quit(1)
 
         for i in range(0, len(self.segment_position)):
             x, y = self.segment_position[i]
-            Game.draw_rect(window, x, y, self.segment_colors[i])
+            Game.draw_rect(window, int(x), int(y), self.segment_colors[i])
 
     def update_directions_if_necessary(self):
+        """
+        Check if the directions of the segments have to be updated and does so if needed.
+        """
         x1, y1 = self.segment_position[0]
         x0, y0 = self.x_pos, self.y_pos
         changes_occurred = False
@@ -101,19 +117,39 @@ class Snake:
                 self.segment_position[i] = (x, y)
 
     def grow(self, color=GREEN):
+        """
+        Lets grow the snake.
+
+        :param color:
+        """
         self.grow_color(color)
         self.grow_position()
 
     def grow_position(self, position=(0, 0)):
+        """
+        Adds a new position to the segment position's list.
+
+        :param position:
+        """
         x_pos, y_pos = position
         if x_pos == 0 and y_pos == 0:
             x_pos, y_pos = self.get_position_for_segments()
         self.segment_position = [(x_pos, y_pos)] + self.segment_position
 
     def grow_color(self, color=GREEN):
-        self.segment_colors = [color] + self.segment_colors
+        """
+        Adds a new color to the segment color's list.
 
-    def get_position_for_segments(self):
+        :param color:
+        """
+        self.segment_colors = self.segment_colors + [color]
+
+    def get_position_for_segments(self) -> tuple:
+        """
+        Updated the positions of a segment.
+
+        :return:
+        """
         x, y = self.segment_position[0]
         if self.direction == 1:
             x += BLOCK_SIZE
@@ -125,7 +161,12 @@ class Snake:
             y -= BLOCK_SIZE
         return x, y
 
-    def check_for_collision(self):
+    def check_for_collision(self) -> bool:
+        """
+        Checks if a collision occurred.
+
+        :return:
+        """
         collision = False
         x_check, y_check = self.segment_position[0]
         for i in range(3, len(self.segment_position)):
@@ -138,17 +179,28 @@ class Snake:
 
 class Food:
     def __init__(self):
+        """
+        Initialized a Food object.
+        """
         self.x_pos = randint(BLOCK_SIZE, WINDOW_WIDTH)
         self.y_pos = randint(BLOCK_SIZE, WINDOW_HEIGHT)
         color_index = randint(0, len(FOOD_COLORS) - 1)
         self.color = FOOD_COLORS[color_index]
 
     def draw(self, window):
+        """
+        Draws the Food object.
+
+        :param window:
+        """
         Game.draw_rect(window, self.x_pos, self.y_pos, self.color)
 
 
 class Game:
     def __init__(self):
+        """
+        Initializes the Game object.
+        """
         if SEGMENTS < 1:
             print('At least one segment is required')
             quit(1)
@@ -158,7 +210,14 @@ class Game:
         self.main()
 
     @staticmethod
-    def check_collision(rect0, rect1):
+    def check_collision(rect0, rect1) -> bool:
+        """
+        Checks if a rectangle collided with an other.
+
+        :param tuple rect0:
+        :param tuple rect1:
+        :return:
+        """
         x0, y0, h0, w0 = rect0
         x1, y1, h1, w1 = rect1
 
@@ -176,7 +235,14 @@ class Game:
                 y_collides = True
         return y_collides and x_collides
 
-    def check_food_collision(self, snake, food):
+    def check_food_collision(self, snake, food) -> bool:
+        """
+        Checks if the snake hit the food.
+
+        :param Snake snake:
+        :param Food food:
+        :return:
+        """
         x, y = snake.segment_position[0]
         if Game.check_collision((x, y, BLOCK_SIZE, BLOCK_SIZE),
                                 (food.x_pos, food.y_pos, BLOCK_SIZE, BLOCK_SIZE)):
@@ -188,6 +254,9 @@ class Game:
         return snake, food
 
     def main(self):
+        """
+        Main game loop.
+        """
         clock = pygame.time.Clock()
         window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         play = True
@@ -232,13 +301,31 @@ class Game:
 
     @staticmethod
     def draw_rect(window, x, y, color=GREEN):
+        """
+        Draws a rectangle.
+
+        :param window:
+        :param int x:
+        :param int y:
+        :param tuple color:
+        """
         pygame.draw.rect(window, color, (x, y, BLOCK_SIZE, BLOCK_SIZE))
 
     def draw_score(self, window):
+        """
+        Displays the score.
+
+        :param window:
+        """
         score_surface = font.render('Score: ' + str(self.score), False, RED)
         window.blit(score_surface, (0, 0))
 
     def draw_time(self, window):
+        """
+        Shows the time played.
+
+        :param window:
+        """
         hours = math.floor(self.time / 3600)
         minutes = math.floor(self.time / 60)
         seconds = math.floor(self.time % 60)
@@ -247,6 +334,7 @@ class Game:
         window.blit(time_surface, (offset, 0))
 
 
+# Start game
 if __name__ == '__main__':
     game = Game()
     pygame.quit()
